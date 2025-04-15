@@ -48,8 +48,13 @@ if [[ "$IS_CHINA" == true ]]; then
   --append-line "/etc/apt/mirrors/debian-security.list:https://mirrors.ustc.edu.cn/debian-security" \
   --append-line "/etc/apt/mirrors/debian-security.list:https://mirrors.tuna.tsinghua.edu.cn/debian-security" \
   --append-line "/etc/apt/mirrors/debian-security.list:https://mirrors.zzu.edu.cn/debian-security" \
+  --run-command "wget -qO - https://apt.v2raya.org/key/public-key.asc | sudo tee /etc/apt/keyrings/v2raya.asc" \
+  --run-command "echo \"deb [signed-by=/etc/apt/keyrings/v2raya.asc] https://apt.v2raya.org/ v2raya main\" | sudo tee /etc/apt/sources.list.d/v2raya.list" \
   --update \
   --install "sudo,qemu-guest-agent,spice-vdagent,bash-completion,git,unzip,zsh,wget,curl,axel,net-tools,iputils-ping,iputils-arping,iputils-tracepath,most,screen,less,vim,bzip2,lldpd,htop,dnsutils,zstd" \
+  --run-command "wget -qO - https://apt.v2raya.org/key/public-key.asc | sudo tee /etc/apt/keyrings/v2raya.asc" \
+  --run-command "echo \"deb [signed-by=/etc/apt/keyrings/v2raya.asc] https://apt.v2raya.org/ v2raya main\" | sudo tee /etc/apt/sources.list.d/v2raya.list" \
+  --install "v2raya,xray" \
   --run-command "curl nxtrace.org/nt | bash" \
   --run-command "wget \"$FASTFETCH_URL\" -O fastfetch-linux-amd64.deb && apt install -y ./fastfetch-linux-amd64.deb && rm ./fastfetch-linux-amd64.deb" \
   --run-command "git clone https://gitee.com/mirrors/oh-my-zsh.git /opt/oh-my-zsh" \
@@ -62,6 +67,7 @@ if [[ "$IS_CHINA" == true ]]; then
   --run-command "cp /etc/skel/.zshrc /root/.zshrc" \
   --run-command "cp /etc/skel/.p10k.zsh /root/.p10k.zsh" \
   --append-line "/etc/adduser.conf:DSHELL=/usr/bin/zsh" \
+  --append-line "/etc/motd:" \
   --run-command "sed -i 's/SHELL=\/bin\/sh/SHELL=\/usr\/bin\/zsh/g' /etc/default/useradd" \
   --run-command "sed -i 's|shell: /bin/bash|shell: /usr/bin/zsh|g' /etc/cloud/cloud.cfg.d/01_debian_cloud.cfg" \
   --run-command "apt-get -y autoremove --purge && apt-get -y clean" \
@@ -83,6 +89,9 @@ else
   --run-command "systemctl enable serial-getty@ttyS1.service" \
   --update \
   --install "sudo,qemu-guest-agent,spice-vdagent,bash-completion,git,unzip,zsh,wget,curl,axel,net-tools,iputils-ping,iputils-arping,iputils-tracepath,most,screen,less,vim,bzip2,lldpd,htop,dnsutils,zstd" \
+  --run-command "wget -qO - https://apt.v2raya.org/key/public-key.asc | sudo tee /etc/apt/keyrings/v2raya.asc" \
+  --run-command "echo \"deb [signed-by=/etc/apt/keyrings/v2raya.asc] https://apt.v2raya.org/ v2raya main\" | sudo tee /etc/apt/sources.list.d/v2raya.list" \
+  --install "v2raya,xray" \
   --run-command "curl nxtrace.org/nt | bash" \
   --run-command "wget \"$FASTFETCH_URL\" -O fastfetch-linux-amd64.deb && apt install -y ./fastfetch-linux-amd64.deb && rm ./fastfetch-linux-amd64.deb" \
   --run-command "git clone https://github.com/ohmyzsh/ohmyzsh.git /opt/oh-my-zsh" \
@@ -99,6 +108,7 @@ else
   --run-command "sed -i 's|shell: /bin/bash|shell: /usr/bin/zsh|g' /etc/cloud/cloud.cfg.d/01_debian_cloud.cfg" \
   --run-command "apt-get -y autoremove --purge && apt-get -y clean" \
   --append-line "/etc/systemd/timesyncd.conf:NTP=time.apple.com time.windows.com" \
+  --append-line "/etc/motd:" \
   --truncate "/etc/apt/mirrors/debian.list" \
   --append-line "/etc/apt/mirrors/debian.list:https://mirrors.ustc.edu.cn/debian/" \
   --append-line "/etc/apt/mirrors/debian.list:https://mirrors.tuna.tsinghua.edu.cn/debian" \
