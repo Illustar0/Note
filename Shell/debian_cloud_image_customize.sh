@@ -43,9 +43,11 @@ if [[ "$IS_CHINA" == true ]]; then
   --truncate "/etc/apt/mirrors/debian.list" \
   --append-line "/etc/apt/mirrors/debian.list:https://mirrors.ustc.edu.cn/debian/" \
   --append-line "/etc/apt/mirrors/debian.list:https://mirrors.tuna.tsinghua.edu.cn/debian" \
+  --append-line "/etc/apt/mirrors/debian.list:https://mirrors.huaweicloud.com/debian" \
   --truncate "/etc/apt/mirrors/debian-security.list" \
   --append-line "/etc/apt/mirrors/debian-security.list:https://mirrors.ustc.edu.cn/debian-security" \
   --append-line "/etc/apt/mirrors/debian-security.list:https://mirrors.tuna.tsinghua.edu.cn/debian-security" \
+  --append-line "/etc/apt/mirrors/debian-security.list:https://mirrors.huaweicloud.com/debian-security" \
   --run-command "wget -qO - https://apt.v2raya.org/key/public-key.asc | sudo tee /etc/apt/keyrings/v2raya.asc" \
   --run-command "echo \"deb [signed-by=/etc/apt/keyrings/v2raya.asc] https://apt.v2raya.org/ v2raya main\" | sudo tee /etc/apt/sources.list.d/v2raya.list" \
   --update \
@@ -110,9 +112,11 @@ else
   --truncate "/etc/apt/mirrors/debian.list" \
   --append-line "/etc/apt/mirrors/debian.list:https://mirrors.ustc.edu.cn/debian/" \
   --append-line "/etc/apt/mirrors/debian.list:https://mirrors.tuna.tsinghua.edu.cn/debian" \
+  --append-line "/etc/apt/mirrors/debian.list:https://mirrors.huaweicloud.com/debian" \
   --truncate "/etc/apt/mirrors/debian-security.list" \
   --append-line "/etc/apt/mirrors/debian-security.list:https://mirrors.ustc.edu.cn/debian-security" \
   --append-line "/etc/apt/mirrors/debian-security.list:https://mirrors.tuna.tsinghua.edu.cn/debian-security" \
+  --append-line "/etc/apt/mirrors/debian-security.list:https://mirrors.huaweicloud.com/debian-security" \
   --delete "/var/log/*.log" \
   --delete "/var/lib/apt/lists/*" \
   --delete "/var/cache/apt/*" \
