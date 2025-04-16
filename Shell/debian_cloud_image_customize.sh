@@ -66,6 +66,7 @@ if [[ "$IS_CHINA" == true ]]; then
   --append-line "/etc/motd:" \
   --run-command "sed -i 's/SHELL=\/bin\/sh/SHELL=\/usr\/bin\/zsh/g' /etc/default/useradd" \
   --run-command "sed -i 's|shell: /bin/bash|shell: /usr/bin/zsh|g' /etc/cloud/cloud.cfg.d/01_debian_cloud.cfg" \
+  --run-command "chsh -s /usr/bin/zsh root" \
   --run-command "apt-get -y autoremove --purge && apt-get -y clean" \
   --append-line "/etc/systemd/timesyncd.conf:NTP=time.apple.com time.windows.com" \
   --delete "/var/log/*.log" \
@@ -102,6 +103,7 @@ else
   --append-line "/etc/adduser.conf:DSHELL=/usr/bin/zsh" \
   --run-command "sed -i 's/SHELL=\/bin\/sh/SHELL=\/usr\/bin\/zsh/g' /etc/default/useradd" \
   --run-command "sed -i 's|shell: /bin/bash|shell: /usr/bin/zsh|g' /etc/cloud/cloud.cfg.d/01_debian_cloud.cfg" \
+  --run-command "chsh -s /usr/bin/zsh root" \
   --run-command "apt-get -y autoremove --purge && apt-get -y clean" \
   --append-line "/etc/systemd/timesyncd.conf:NTP=time.apple.com time.windows.com" \
   --append-line "/etc/motd:" \
