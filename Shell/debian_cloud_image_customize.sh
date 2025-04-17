@@ -1,5 +1,5 @@
 #!/bin/bash
-FASTFETCH_URL=$(curl -s https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest | grep -o 'https://.*fastfetch-linux-amd64.deb')
+FASTFETCH_URL=$(curl -s https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest | grep -o 'https://github.com/fastfetch-cli/fastfetch/releases/download/[^/]*/fastfetch-linux-amd64.deb')
 IP_COUNTRY=$(curl -s https://ipapi.co/country)
 IS_CHINA=false
 if [[ "$IP_COUNTRY" == "CN" ]]; then
