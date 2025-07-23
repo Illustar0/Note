@@ -74,7 +74,10 @@ create_systemd_service() {
         echo "GOST service already exists at $service_file"
         return
     fi
-
+    
+    mkdir -p /etc/gost
+    touch /etc/gost/gost.yml
+    
     echo "Creating systemd service..."
     cat > "$service_file" <<EOF
 [Unit]
@@ -84,7 +87,8 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/local/bin/gost -api 127.0.0.1:18080 -C /etc/gost/gost.json
+WorkingDirectory=/etc/gost
+ExecStart=/usr/local/bin/gost -api 127.0.0.1:18080 -C /etc/gost/gost.yml
 Restart=always
 RestartSec=5s
 
