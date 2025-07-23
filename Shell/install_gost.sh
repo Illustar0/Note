@@ -16,6 +16,13 @@ get_download_url() {
     local arch=$(uname -m)
     local os=$(uname -s | tr '[:upper:]' '[:lower:]')
 
+    local base_url="https://github.com"
+
+    if [[ "$(curl -s --max-time 2 ipinfo.io/country)" == "CN" ]]; then
+        echo "Detect CN IP" >&2
+        base_url="https://ghfast.top/https://github.com"
+    fi
+    
     case "$arch" in
         x86_64|amd64)
             arch="amd64"
@@ -24,12 +31,12 @@ get_download_url() {
             arch="arm64"
             ;;
         *)
-            echo "Unsupported architecture: $arch"
+            echo "Unsupported architecture: $arch" >&2
             exit 1
             ;;
     esac
 
-    echo "https://github.com/go-gost/gost/releases/download/${version}/gost_${version#v}_${os}_${arch}.tar.gz"
+    echo "${base_url}/go-gost/gost/releases/download/${version}/gost_${version#v}_${os}_${arch}.tar.gz"
 }
 
 # 安装GOST
