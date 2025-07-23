@@ -77,7 +77,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/local/bin/gost -api 127.0.0.1:18080
+ExecStart=/usr/local/bin/gost -api 127.0.0.1:18080 -C /etc/gost/gost.json
 Restart=always
 RestartSec=5s
 
