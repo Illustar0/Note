@@ -30,11 +30,10 @@ for cmd in virt-customize curl basename virt-sparsify tput; do
   fi
 done
 
-# --- 1. 参数解析 (新的核心逻辑) ---
+# --- 1. 参数解析 ---
 USE_CHINA_MIRRORS=false
 INPUT_QCOW2=""
 
-# 循环解析所有传入的参数
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --cn)
@@ -42,26 +41,22 @@ while [[ $# -gt 0 ]]; do
       shift # 消费 --cn 参数
       ;;
     *)
-      # 如果已经有文件名了，说明传入了多个文件，报错
       if [ -n "$INPUT_QCOW2" ]; then
         log_error "错误: 只能指定一个镜像文件。"
         exit 1
       fi
-      # 将非--cn的参数认定为是镜像文件名
       INPUT_QCOW2="$1"
       shift # 消费文件名参数
       ;;
   esac
 done
 
-# 检查是否提供了镜像文件名
 if [ -z "$INPUT_QCOW2" ]; then
   log_error "用法: $0 [--cn] <基础镜像.qcow2>"
   exit 1
 fi
 
-
-# --- 2. 文件准备 (安全处理) ---
+# --- 2. 文件准备 ---
 if [ ! -f "${INPUT_QCOW2}" ]; then
     log_error "错误: 输入的镜像文件 '${INPUT_QCOW2}' 不存在。"
     exit 1
@@ -74,20 +69,17 @@ FINAL_IMAGE="${BASENAME}-custom.qcow2"
 log_info "准备源镜像以进行定制 (从 '${INPUT_QCOW2}' 创建)..."
 cp "${INPUT_QCOW2}" "${SRC_IMAGE}"
 
-
 # --- 3. 环境与变量设置 ---
 FASTFETCH_URL=$(curl -s https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest | grep -o 'https://github.com/fastfetch-cli/fastfetch/releases/download/[^/]*/fastfetch-linux-amd64.deb')
 
-# 定义变量
-MIRROR_COMMANDS=()
-OHMYZSH_REPO=""
-P10K_REPO=""
+# Git 仓库地址固定为 GitHub 官方源
+OHMYZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
+P10K_REPO="https://github.com/romkatv/powerlevel10k.git"
 
-# 根据 --cn 参数设置变量
+# --cn 参数仅控制 APT 镜像源
+MIRROR_COMMANDS=()
 if [[ "$USE_CHINA_MIRRORS" == true ]]; then
-  log_info "检测到 --cn 参数，使用国内镜像源"
-  OHMYZSH_REPO="https://gitee.com/mirrors/oh-my-zsh.git"
-  P10K_REPO="https://gitee.com/romkatv/powerlevel10k.git"
+  log_info "检测到 --cn 参数，将切换 APT 镜像源为国内源"
   MIRROR_COMMANDS=(
     --truncate "/etc/apt/mirrors/debian.list"
     --append-line "/etc/apt/mirrors/debian.list:https://mirrors.ustc.edu.cn/debian/"
@@ -99,9 +91,7 @@ if [[ "$USE_CHINA_MIRRORS" == true ]]; then
     --append-line "/etc/apt/mirrors/debian-security.list:https://mirrors.huaweicloud.com/debian-security"
   )
 else
-  log_info "未指定 --cn 参数，使用默认配置"
-  OHMYZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
-  P10K_REPO="https://github.com/romkatv/powerlevel10k.git"
+  log_info "未指定 --cn 参数，使用 Debian 默认 APT 镜像源"
 fi
 
 # --- 4. 执行镜像定制 ---
@@ -140,7 +130,7 @@ virt-customize -a "${SRC_IMAGE}" \
   --run-command "sed -i 's/ZSH_THEME=\"robbyrussell\"/ZSH_THEME=\"powerlevel10k\/powerlevel10k\"/g' /etc/skel/.zshrc" \
   --run-command "sed -i 's|export ZSH=\"\$HOME/.oh-my-zsh\"|export ZSH=/opt/oh-my-zsh|g' /etc/skel/.zshrc" \
   --copy-in "./.p10k.zsh:/etc/skel/" \
-  --append-line "/etc/skel/.zshrc:'[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh'" \
+  --append-line "/etc/skel/.zshrc:[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh" \
   --run-command "cp /etc/skel/.zshrc /root/.zshrc && cp /etc/skel/.p10k.zsh /root/.p10k.zsh" \
   --run-command "chsh -s /usr/bin/zsh root" \
   \
