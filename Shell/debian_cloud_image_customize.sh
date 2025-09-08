@@ -9,7 +9,7 @@ RED=$(tput setaf 1)
 YELLOW=$(tput setaf 3)
 NC=$(tput sgr0)
 
-# --- 日志函数 (已修正 log_error) ---
+# --- 日志函数 ---
 log_info() {
   echo -e "[${GREEN}INFO${NC}] $@"
 }
@@ -30,43 +30,64 @@ for cmd in virt-customize curl basename virt-sparsify tput; do
   fi
 done
 
+# --- 1. 参数解析 (新的核心逻辑) ---
+USE_CHINA_MIRRORS=false
+INPUT_QCOW2=""
 
-# --- 1. 输入和文件处理 (更安全、更清晰) ---
-if [ -z "$1" ]; then
-  log_error "用法: $0 <基础镜像.qcow2>"
+# 循环解析所有传入的参数
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --cn)
+      USE_CHINA_MIRRORS=true
+      shift # 消费 --cn 参数
+      ;;
+    *)
+      # 如果已经有文件名了，说明传入了多个文件，报错
+      if [ -n "$INPUT_QCOW2" ]; then
+        log_error "错误: 只能指定一个镜像文件。"
+        exit 1
+      fi
+      # 将非--cn的参数认定为是镜像文件名
+      INPUT_QCOW2="$1"
+      shift # 消费文件名参数
+      ;;
+  esac
+done
+
+# 检查是否提供了镜像文件名
+if [ -z "$INPUT_QCOW2" ]; then
+  log_error "用法: $0 [--cn] <基础镜像.qcow2>"
   exit 1
 fi
 
-INPUT_QCOW2="$1"
+
+# --- 2. 文件准备 (安全处理) ---
 if [ ! -f "${INPUT_QCOW2}" ]; then
-    log_error "输入的镜像文件 '${INPUT_QCOW2}' 不存在。"
+    log_error "错误: 输入的镜像文件 '${INPUT_QCOW2}' 不存在。"
     exit 1
 fi
 
 BASENAME=$(basename "${INPUT_QCOW2}" .qcow2)
 SRC_IMAGE="${BASENAME}-src.qcow2"
-FINAL_IMAGE="${BASENAME}-custom.qcow2" # <--- 安全起见，输出到新文件
+FINAL_IMAGE="${BASENAME}-custom.qcow2"
 
-log_info "准备源镜像以进行定制..."
-# 总是从原始输入文件复制一份新的源文件进行操作，保证原始文件安全
+log_info "准备源镜像以进行定制 (从 '${INPUT_QCOW2}' 创建)..."
 cp "${INPUT_QCOW2}" "${SRC_IMAGE}"
 
 
-# --- 2. 环境检测与变量设置 (避免代码重复) ---
-log_info "正在检测网络环境..."
+# --- 3. 环境与变量设置 ---
 FASTFETCH_URL=$(curl -s https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest | grep -o 'https://github.com/fastfetch-cli/fastfetch/releases/download/[^/]*/fastfetch-linux-amd64.deb')
-IP_COUNTRY=$(curl -s https://ipapi.co/country)
 
 # 定义变量
 MIRROR_COMMANDS=()
 OHMYZSH_REPO=""
 P10K_REPO=""
 
-if [[ "$IP_COUNTRY" == "CN" ]]; then
-  log_info "检测到中国 IP，使用国内镜像源"
+# 根据 --cn 参数设置变量
+if [[ "$USE_CHINA_MIRRORS" == true ]]; then
+  log_info "检测到 --cn 参数，使用国内镜像源"
   OHMYZSH_REPO="https://gitee.com/mirrors/oh-my-zsh.git"
   P10K_REPO="https://gitee.com/romkatv/powerlevel10k.git"
-  # 使用数组存储镜像相关命令
   MIRROR_COMMANDS=(
     --truncate "/etc/apt/mirrors/debian.list"
     --append-line "/etc/apt/mirrors/debian.list:https://mirrors.ustc.edu.cn/debian/"
@@ -78,13 +99,12 @@ if [[ "$IP_COUNTRY" == "CN" ]]; then
     --append-line "/etc/apt/mirrors/debian-security.list:https://mirrors.huaweicloud.com/debian-security"
   )
 else
-  log_info "检测到境外 IP，使用默认配置"
+  log_info "未指定 --cn 参数，使用默认配置"
   OHMYZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
   P10K_REPO="https://github.com/romkatv/powerlevel10k.git"
-  # 境外IP时，MIRROR_COMMANDS 数组为空
 fi
 
-# --- 3. 执行镜像定制 (单一、清晰的命令) ---
+# --- 4. 执行镜像定制 ---
 log_info "开始执行 virt-customize..."
 
 virt-customize -a "${SRC_IMAGE}" \
@@ -101,7 +121,7 @@ virt-customize -a "${SRC_IMAGE}" \
   --run-command "sed -i 's|uname -snrvm|fastfetch|g' /etc/update-motd.d/10-uname" \
   --append-line "/etc/motd:" \
   \
-  # --- APT 镜像源配置 (根据网络环境动态插入) ---
+  # --- APT 镜像源配置 (根据 --cn 参数动态插入) ---
   "${MIRROR_COMMANDS[@]}" \
   \
   # --- 软件安装 ---
