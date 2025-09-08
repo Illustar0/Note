@@ -97,54 +97,72 @@ fi
 # --- 4. 执行镜像定制 ---
 log_info "开始执行 virt-customize..."
 
-virt-customize -a "${SRC_IMAGE}" \
-  --smp 2 \
-  --verbose \
-  --timezone "Asia/Shanghai" \
-  \
-  # --- 通用系统配置 ---
-  --append-line "/etc/default/grub:GRUB_DISABLE_OS_PROBER=true" \
-  --run-command "update-grub" \
-  --run-command "systemctl enable serial-getty@ttyS1.service" \
-  --run-command "sed -i 's|generate_mirrorlists: true|generate_mirrorlists: false|g' /etc/cloud/cloud.cfg.d/01_debian_cloud.cfg" \
-  --append-line "/etc/systemd/timesyncd.conf:NTP=time.apple.com time.windows.com" \
-  --run-command "sed -i 's|uname -snrvm|fastfetch|g' /etc/update-motd.d/10-uname" \
-  --append-line "/etc/motd:" \
-  \
-  # --- APT 镜像源配置 (根据 --cn 参数动态插入) ---
-  "${MIRROR_COMMANDS[@]}" \
-  \
-  # --- 软件安装 ---
-  --run-command "wget -qO - https://apt.v2raya.org/key/public-key.asc | tee /etc/apt/keyrings/v2raya.asc" \
-  --run-command "echo \"deb [signed-by=/etc/apt/keyrings/v2raya.asc] https://apt.v2raya.org/ v2raya main\" | tee /etc/apt/sources.list.d/v2raya.list" \
-  --update \
-  --install "sudo,qemu-guest-agent,spice-vdagent,bash-completion,git,unzip,zsh,wget,curl,axel,net-tools,iputils-ping,iputils-arping,iputils-tracepath,most,screen,less,vim,bzip2,lldpd,htop,dnsutils,zstd" \
-  --install "v2raya,xray" \
-  --run-command "curl -L nxtrace.org/nt | bash" \
-  --run-command "wget \"$FASTFETCH_URL\" -O fastfetch-linux-amd64.deb && apt install -y ./fastfetch-linux-amd64.deb && rm ./fastfetch-linux-amd64.deb" \
-  \
-  # --- Zsh 和 Oh-My-Zsh 配置 ---
-  --run-command "git clone ${OHMYZSH_REPO} /opt/oh-my-zsh" \
-  --run-command "git clone --depth=1 ${P10K_REPO} /opt/oh-my-zsh/custom/themes/powerlevel10k" \
-  --run-command "cp /opt/oh-my-zsh/templates/zshrc.zsh-template /etc/skel/.zshrc" \
-  --run-command "sed -i 's/ZSH_THEME=\"robbyrussell\"/ZSH_THEME=\"powerlevel10k\/powerlevel10k\"/g' /etc/skel/.zshrc" \
-  --run-command "sed -i 's|export ZSH=\"\$HOME/.oh-my-zsh\"|export ZSH=/opt/oh-my-zsh|g' /etc/skel/.zshrc" \
-  --copy-in "./.p10k.zsh:/etc/skel/" \
-  --append-line "/etc/skel/.zshrc:[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh" \
-  --run-command "cp /etc/skel/.zshrc /root/.zshrc && cp /etc/skel/.p10k.zsh /root/.p10k.zsh" \
-  --run-command "chsh -s /usr/bin/zsh root" \
-  \
-  # --- 设置 Zsh 为默认 Shell ---
-  --append-line "/etc/adduser.conf:DSHELL=/usr/bin/zsh" \
-  --run-command "sed -i 's/SHELL=\/bin\/sh/SHELL=\/usr\/bin\/zsh/g' /etc/default/useradd" \
-  --run-command "sed -i 's|shell: /bin/bash|shell: /usr/bin/zsh|g' /etc/cloud/cloud.cfg.d/01_debian_cloud.cfg" \
-  \
-  # --- 清理工作 ---
-  --run-command "apt-get -y autoremove --purge && apt-get -y clean" \
-  --delete "/var/log/*.log" \
-  --delete "/var/lib/apt/lists/*" \
-  --delete "/var/cache/apt/*" \
+# 构建基础命令参数
+VIRT_CUSTOMIZE_ARGS=(
+  -a "${SRC_IMAGE}"
+  --smp 2
+  --verbose
+  --timezone "Asia/Shanghai"
+)
+
+# 添加通用系统配置
+VIRT_CUSTOMIZE_ARGS+=(
+  --append-line "/etc/default/grub:GRUB_DISABLE_OS_PROBER=true"
+  --run-command "update-grub"
+  --run-command "systemctl enable serial-getty@ttyS1.service"
+  --run-command "sed -i 's|generate_mirrorlists: true|generate_mirrorlists: false|g' /etc/cloud/cloud.cfg.d/01_debian_cloud.cfg"
+  --append-line "/etc/systemd/timesyncd.conf:NTP=time.apple.com time.windows.com"
+  --run-command "sed -i 's|uname -snrvm|fastfetch|g' /etc/update-motd.d/10-uname"
+  --append-line "/etc/motd:"
+)
+
+# 根据 --cn 参数添加镜像源配置
+if [[ ${#MIRROR_COMMANDS[@]} -gt 0 ]]; then
+  VIRT_CUSTOMIZE_ARGS+=("${MIRROR_COMMANDS[@]}")
+fi
+
+# 添加软件安装和配置
+VIRT_CUSTOMIZE_ARGS+=(
+  --run-command "wget -qO - https://apt.v2raya.org/key/public-key.asc | tee /etc/apt/keyrings/v2raya.asc"
+  --run-command "echo \"deb [signed-by=/etc/apt/keyrings/v2raya.asc] https://apt.v2raya.org/ v2raya main\" | tee /etc/apt/sources.list.d/v2raya.list"
+  --update
+  --install "sudo,qemu-guest-agent,spice-vdagent,bash-completion,git,unzip,zsh,wget,curl,axel,net-tools,iputils-ping,iputils-arping,iputils-tracepath,most,screen,less,vim,bzip2,lldpd,htop,dnsutils,zstd"
+  --install "v2raya,xray"
+  --run-command "curl -L nxtrace.org/nt | bash"
+  --run-command "wget \"$FASTFETCH_URL\" -O fastfetch-linux-amd64.deb && apt install -y ./fastfetch-linux-amd64.deb && rm ./fastfetch-linux-amd64.deb"
+)
+
+# 添加 Zsh 和 Oh-My-Zsh 配置
+VIRT_CUSTOMIZE_ARGS+=(
+  --run-command "git clone ${OHMYZSH_REPO} /opt/oh-my-zsh"
+  --run-command "git clone --depth=1 ${P10K_REPO} /opt/oh-my-zsh/custom/themes/powerlevel10k"
+  --run-command "cp /opt/oh-my-zsh/templates/zshrc.zsh-template /etc/skel/.zshrc"
+  --run-command "sed -i 's/ZSH_THEME=\"robbyrussell\"/ZSH_THEME=\"powerlevel10k\/powerlevel10k\"/g' /etc/skel/.zshrc"
+  --run-command "sed -i 's|export ZSH=\"\$HOME/.oh-my-zsh\"|export ZSH=/opt/oh-my-zsh|g' /etc/skel/.zshrc"
+  --copy-in "./.p10k.zsh:/etc/skel/"
+  --append-line "/etc/skel/.zshrc:[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh"
+  --run-command "cp /etc/skel/.zshrc /root/.zshrc && cp /etc/skel/.p10k.zsh /root/.p10k.zsh"
+  --run-command "chsh -s /usr/bin/zsh root"
+)
+
+# 设置 Zsh 为默认 Shell
+VIRT_CUSTOMIZE_ARGS+=(
+  --append-line "/etc/adduser.conf:DSHELL=/usr/bin/zsh"
+  --run-command "sed -i 's/SHELL=\/bin\/sh/SHELL=\/usr\/bin\/zsh/g' /etc/default/useradd"
+  --run-command "sed -i 's|shell: /bin/bash|shell: /usr/bin/zsh|g' /etc/cloud/cloud.cfg.d/01_debian_cloud.cfg"
+)
+
+# 清理工作
+VIRT_CUSTOMIZE_ARGS+=(
+  --run-command "apt-get -y autoremove --purge && apt-get -y clean"
+  --delete "/var/log/*.log"
+  --delete "/var/lib/apt/lists/*"
+  --delete "/var/cache/apt/*"
   --truncate "/etc/machine-id"
+)
+
+# 执行 virt-customize 命令
+virt-customize "${VIRT_CUSTOMIZE_ARGS[@]}"
 
 log_info "镜像定制完成，正在清理和压缩镜像..."
 virt-sparsify --compress "${SRC_IMAGE}" "${FINAL_IMAGE}"
